@@ -1,0 +1,50 @@
+name: CI
+
+# Trigger the workflow on pushes and pull requests to the main branch
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+
+    steps:
+      # Checkout the repository code
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      # Set up Node.js environment with caching for npm dependencies
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'  # Matches your Dockerfile
+          cache: 'npm'       # Caches npm dependencies based on package-lock.json
+
+      # Install project dependencies
+      - name: Install dependencies
+        run: npm ci  # Cleaner install for CI environments
+
+      # Build the application
+      - name: Build application
+        run: npm run build
+
+      # Run tests
+      - name: Run tests
+        run: npm test
+
+      # Build Docker image (without pushing) to validate Dockerfile
+      - name: Build Docker image for validation
+        run: docker build -t ${{ github.repository }}-test:latest .
+        # This ensures the Dockerfile works without needing to push
+
+      # Optional: Cache Docker layers for faster builds in future runs
+      - name: Cache Docker layers
+        uses: actions/cache@v3
+        with:
+          path: /tmp/.buildx-cache
+          key: ${{ runner.os }}-buildx-${{ github.sha }}
+          restore-keys: |
+            ${{ runner.os }}-buildx-
